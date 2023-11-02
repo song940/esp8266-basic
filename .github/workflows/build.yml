@@ -3,7 +3,6 @@ name: PlatformIO CI
 permissions:
   contents: write
 
-
 on: [push]
 
 jobs:
@@ -31,18 +30,15 @@ jobs:
         id: firmware
         run: |
           DATE=$(date +'%Y%m%d')
-          FIRMWARE_PATH=$(find .pio -name 'firmware.bin')
           PROJECT_NAME=${GITHUB_REPOSITORY##*/}
-          echo "FIRMWARE_PATH=${FIRMWARE_PATH}" >> $GITHUB_ENV
-          echo "::set-output name=firmware_path::${NEW_NAME}"
+          FIRMWARE_PATH=$(find .pio -name 'firmware.bin')
         shell: bash
 
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MY_PAT: ${{ secrets.MY_PAT }}
+          MY_PAT: ${{ secrets.MY_PAT }}  # Use PAT if you need to, otherwise use GITHUB_TOKEN
         with:
           tag_name: nightly-tag-${{ env.DATE }}
           release_name: Release-${{ github.sha }}
@@ -52,8 +48,7 @@ jobs:
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MY_PAT: ${{ secrets.MY_PAT }}  # Again, using the PAT
+          MY_PAT: ${{ secrets.MY_PAT }}  # Use PAT if you need to, otherwise use GITHUB_TOKEN
         with:
           tag_name: nightly-tag-${{ env.DATE }}
           upload_url: ${{ steps.create_release.outputs.upload_url }}
