@@ -1,5 +1,9 @@
 name: PlatformIO CI
 
+permissions:
+  contents: write
+
+
 on: [push]
 
 jobs:
@@ -23,19 +27,17 @@ jobs:
       - name: Build PlatformIO Project
         run: pio run
 
-      - name: Locate firmware binary
-        id: locate_firmware
+      - name: Locate and rename firmware binary
+        id: firmware
         run: |
           FIRMWARE_PATH=$(find .pio -name 'firmware.bin')
-          echo "FIRMWARE_PATH=$FIRMWARE_PATH" >> $GITHUB_ENV
-          echo "::set-output name=firmware_path::$FIRMWARE_PATH"
-        shell: bash
-
-      - name: Rename firmware binary
-        run: |
           DATE=$(date +'%Y%m%d')
           PROJECT_NAME=${GITHUB_REPOSITORY##*/}
-          mv ${{ steps.locate_firmware.outputs.firmware_path }} "./${PROJECT_NAME}_${DATE}.bin"
+          NEW_NAME="${PROJECT_NAME}_${DATE}.bin"
+          echo "FIRMWARE_PATH=${FIRMWARE_PATH}" >> $GITHUB_ENV
+          echo "NEW_NAME=${NEW_NAME}" >> $GITHUB_ENV
+          mv "${FIRMWARE_PATH}" "${NEW_NAME}"
+          echo "::set-output name=firmware_path::${NEW_NAME}"
         shell: bash
 
       - name: Create Release
@@ -43,6 +45,7 @@ jobs:
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MY_PAT: ${{ secrets.MY_PAT }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release-${{ github.sha }}
@@ -53,8 +56,9 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MY_PAT: ${{ secrets.MY_PAT }}  # Again, using the PAT
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.PROJECT_NAME }}_${{ env.DATE }}.bin
-          asset_name: ${{ env.PROJECT_NAME }}_${{ env.DATE }}.bin
+          asset_path: ${{ env.NEW_NAME }}
+          asset_name: ${{ env.NEW_NAME }}
           asset_content_type: application/octet-stream
