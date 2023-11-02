@@ -1,35 +1,51 @@
-# This is a basic workflow to help you get started with Actions
+name: PlatformIO CI
 
-name: CI
+on: [push]
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
-on:
-  push:
-    branches: [ master, develop ]
-  pull_request:
-    branches: [ master, develop ]
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'true'
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install platformio
-    # It is important to first install the libraries before compiling, since otherwise compilation might fail to find the just-installed libraries
-    - name: Install platformIO libraries
-      run: pio lib install
-    - name: Run PlatformIO
-      run: platformio run
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Build PlatformIO Project
+        run: pio run
+
+      # Assuming the build step creates an artifact in the 'dist' directory
+      - name: Archive production artifacts
+        run: |
+          zip -r release-${{ github.sha }}.zip dist
+        shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release-${{ github.sha }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-${{ github.sha }}.zip
+          asset_name: release-${{ github.sha }}-${{ github.event.push.timestamp }}.zip
+          asset_content_type: application/zip
