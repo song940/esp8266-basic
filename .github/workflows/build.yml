@@ -32,6 +32,9 @@ jobs:
           DATE=$(date +'%Y%m%d')
           PROJECT_NAME=${GITHUB_REPOSITORY##*/}
           FIRMWARE_PATH=$(find .pio -name 'firmware.bin')
+          echo "DATE=$DATE" >> $GITHUB_ENV
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+          echo "FIRMWARE_PATH=$FIRMWARE_PATH" >> $GITHUB_ENV
         shell: bash
 
       - name: Create Release
